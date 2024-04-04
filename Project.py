@@ -62,27 +62,79 @@ for i, year in enumerate(df.columns):
             ratios[year]['Revenue Growth Rate %'] = growth_rate
 
 ratios_df = pd.DataFrame.from_dict(ratios, orient='index')
-# print("Printing The PROFIT RATIOS: \n",ratios_df)
+print("Printing The PROFIT RATIOS: \n",ratios_df)
 
 
 
-#  Now Calculating the Balance sheet ratios ->
 file_path = r"C:\Users\kaust\Desktop\Finance Project\venv\Ferrari Financials.xlsx"
 sheet_name = 'Balance Sheet'
 
 
-# Balance_sheet_df = pd.read_excel(file_path, sheet_name=sheet_name)
-Balance_sheet_df = pd.read_excel(file_path, sheet_name=sheet_name, header=0)
+Balance_sheet_df = pd.read_excel(file_path, sheet_name=sheet_name, header=1)
 
-# Balance_sheet_df.set_index('Balance Sheet', inplace=True)
 Balance_sheet_df.set_index(Balance_sheet_df.columns[0], inplace=True)
 
-# print(Balance_sheet_df)
-
 for col in Balance_sheet_df.columns:
-    # Using to_numeric with errors='coerce' will replace non-numeric values with NaN
-    # Assuming that the first column after the index is the date header, we start conversion from the second column
     Balance_sheet_df[col] = pd.to_numeric(Balance_sheet_df[col].astype(str).str.replace(',', ''), errors='coerce')
 
-# Print the dataframe to verify the result
-print(Balance_sheet_df)
+# Calculate the ratios
+current_ratio = Balance_sheet_df.loc['Current Assets'] / Balance_sheet_df.loc['Current Liabilities']
+quick_ratio = (Balance_sheet_df.loc['Cash And Cash Equivalents'] + 
+               Balance_sheet_df.loc['Other Short Term Investments'] + 
+               Balance_sheet_df.loc['Receivables']) / Balance_sheet_df.loc['Current Liabilities']
+debt_to_equity_ratio = Balance_sheet_df.loc['Total Liabilities Net Minority Interest'] / Balance_sheet_df.loc['Stockholders\' Equity']
+
+# Create a new DataFrame for ratios with the correct column names from the balance sheet
+ratios_df = pd.DataFrame({
+    'Current Ratio': current_ratio,
+    'Quick Ratio': quick_ratio,
+    'Debt-to-Equity Ratio': debt_to_equity_ratio
+}, index=Balance_sheet_df.columns)
+
+ratios_df = ratios_df.T
+
+print(ratios_df)
+
+
+
+
+# Now we will calculating other ratios ->
+file_path = r"C:\Users\kaust\Desktop\Finance Project\venv\Ferrari Financials.xlsx"
+cash_flow_sheet = 'Cash Flow'
+balance_sheet = 'Balance Sheet'
+
+# Reading the Cash Flow sheet
+cash_flow_df = pd.read_excel(file_path, sheet_name=cash_flow_sheet, header=1)
+cash_flow_df.set_index(cash_flow_df.columns[0], inplace=True)
+for col in cash_flow_df.columns:
+    cash_flow_df[col] = pd.to_numeric(cash_flow_df[col].astype(str).str.replace(',', ''), errors='coerce')
+
+# Reading the Balance Sheet
+balance_sheet_df = pd.read_excel(file_path, sheet_name=balance_sheet, header=1)
+balance_sheet_df.set_index(balance_sheet_df.columns[0], inplace=True)
+for col in balance_sheet_df.columns:
+    balance_sheet_df[col] = pd.to_numeric(balance_sheet_df[col].astype(str).str.replace(',', ''), errors='coerce')
+
+# Dates for the last four years
+years = ['12/30/2023', '12/30/2022', '12/30/2021', '12/30/2020']
+
+# Initialize a dictionary to store the ratios
+ratios = {'Year': [], 'Operating Cash Flow Ratio': [], 'Free Cash Flow': []}
+
+# Calculate the ratios for each year
+for year in years:
+    current_liabilities = balance_sheet_df.loc['Current Liabilities', year]
+    operating_cash_flow = cash_flow_df.loc['Operating Cash Flow', year]
+    capital_expenditure = cash_flow_df.loc['Capital Expenditure', year]
+    operating_cash_flow_ratio = operating_cash_flow / current_liabilities
+    free_cash_flow = operating_cash_flow + capital_expenditure
+
+    # Store the results
+    ratios['Year'].append(year)
+    ratios['Operating Cash Flow Ratio'].append(operating_cash_flow_ratio)
+    ratios['Free Cash Flow'].append(free_cash_flow)
+
+# Convert the results dictionary to a DataFrame for better visualization
+ratios_df = pd.DataFrame(ratios)
+
+print(ratios_df)
