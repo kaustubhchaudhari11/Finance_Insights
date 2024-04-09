@@ -1,7 +1,7 @@
 import pandas as pd
-
 import matplotlib.pyplot as plt
-
+import numpy as np
+from sklearn.linear_model import LinearRegression
 
 
 ferrari_financials = pd.read_excel(r"C:\Users\kaust\Desktop\Finance Project\venv\Ferrari Financials.xlsx")
@@ -508,3 +508,61 @@ metrics = [
 # Plot each metric separately
 for metric in metrics:
     plot_metric(metric, all_data_df, "Financial Metric Comparison")
+
+# Assuming all_data_df is your DataFrame containing the financial metrics for Ferrari and Mercedes
+# Extend the index for plotting forecasted values
+extended_years = ['12/30/2020', '12/30/2021', '12/30/2022', '12/30/2023', '2024', '2025']
+forecast_years = np.array([4, 5]).reshape(-1, 1)  # Years for forecasting
+years = np.array([0, 1, 2, 3]).reshape(-1, 1)  # Original dataset years
+
+# List of metrics to forecast
+metrics = [
+    "Revenue Growth Rate %",
+    "Gross Profit Margin %",
+    "Operating Profit Margin %",
+    "Net Profit Margin %",
+    "Current Ratio",
+    "Quick Ratio",
+    "Debt-to-Equity Ratio",
+    "Operating Cash Flow Ratio",
+    "Free Cash Flow"
+]
+
+# Function to forecast a metric using linear regression
+def forecast_metric(metric_name, df):
+    # Prepare data
+    ferrari_metric = df[f'Ferrari_{metric_name}'].dropna().values.reshape(-1, 1)
+    mercedes_metric = df[f'Mercedes_{metric_name}'].dropna().values.reshape(-1, 1)
+    
+    # Linear regression for Ferrari
+    lr_ferrari = LinearRegression().fit(years[:len(ferrari_metric)], ferrari_metric)
+    ferrari_forecast = lr_ferrari.predict(forecast_years)
+    
+    # Linear regression for Mercedes
+    lr_mercedes = LinearRegression().fit(years[:len(mercedes_metric)], mercedes_metric)
+    mercedes_forecast = lr_mercedes.predict(forecast_years)
+    
+    return ferrari_forecast.flatten(), mercedes_forecast.flatten()
+
+# Function to plot actual and forecasted metrics
+def plot_forecasted_metric(metric_name, df):
+    ferrari_forecast, mercedes_forecast = forecast_metric(metric_name, df)
+    ferrari_actual_and_forecast = np.append(df[f'Ferrari_{metric_name}'], ferrari_forecast)
+    mercedes_actual_and_forecast = np.append(df[f'Mercedes_{metric_name}'], mercedes_forecast)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(extended_years, ferrari_actual_and_forecast, label='Ferrari Actual', marker='o', linestyle='-')
+    plt.plot(extended_years, mercedes_actual_and_forecast, label='Mercedes Actual', marker='o', linestyle='-')
+    plt.plot(extended_years[-2:], ferrari_forecast, label='Ferrari Forecast', marker='o', linestyle='--', color='orange')
+    plt.plot(extended_years[-2:], mercedes_forecast, label='Mercedes Forecast', marker='o', linestyle='--', color='green')
+    plt.title(f'{metric_name} with Forecasted Values (2024-2025)')
+    plt.xlabel('Year')
+    plt.ylabel(metric_name)
+    plt.legend()
+    plt.grid(True)
+    plt.xticks(rotation=45)
+    plt.show()
+
+# Example: Forecast and plot "Current Ratio"
+for metric in metrics:
+    plot_forecasted_metric(metric, all_data_df)
