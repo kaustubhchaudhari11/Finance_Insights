@@ -530,39 +530,36 @@ metrics = [
 
 # Function to forecast a metric using linear regression
 def forecast_metric(metric_name, df):
-    # Prepare data
-    ferrari_metric = df[f'Ferrari_{metric_name}'].dropna().values.reshape(-1, 1)
-    mercedes_metric = df[f'Mercedes_{metric_name}'].dropna().values.reshape(-1, 1)
-    
-    # Linear regression for Ferrari
-    lr_ferrari = LinearRegression().fit(years[:len(ferrari_metric)], ferrari_metric)
-    ferrari_forecast = lr_ferrari.predict(forecast_years)
-    
-    # Linear regression for Mercedes
-    lr_mercedes = LinearRegression().fit(years[:len(mercedes_metric)], mercedes_metric)
-    mercedes_forecast = lr_mercedes.predict(forecast_years)
-    
-    return ferrari_forecast.flatten(), mercedes_forecast.flatten()
+    forecasts = {}
+    for company in ['Ferrari', 'Mercedes', 'Porsche']:
+        metric_values = df[f'{company}_{metric_name}'].values.reshape(-1, 1)
+        valid_values = metric_values[~np.isnan(metric_values).flatten()]
+        if len(valid_values) >= 4:  # Ensure we have at least 4 years of data
+            lr = LinearRegression().fit(years[:len(valid_values)], valid_values)
+            forecast = lr.predict(forecast_years)
+            forecasts[company] = forecast.flatten()
+        else:
+            forecasts[company] = [np.nan, np.nan]  # Use NaNs if not enough data
+    return forecasts
 
 # Function to plot actual and forecasted metrics
 def plot_forecasted_metric(metric_name, df):
-    ferrari_forecast, mercedes_forecast = forecast_metric(metric_name, df)
-    ferrari_actual_and_forecast = np.append(df[f'Ferrari_{metric_name}'], ferrari_forecast)
-    mercedes_actual_and_forecast = np.append(df[f'Mercedes_{metric_name}'], mercedes_forecast)
+    forecasts = forecast_metric(metric_name, df)
     
-    plt.figure(figsize=(10, 6))
-    plt.plot(extended_years, ferrari_actual_and_forecast, label='Ferrari Actual', marker='o', linestyle='-')
-    plt.plot(extended_years, mercedes_actual_and_forecast, label='Mercedes Actual', marker='o', linestyle='-')
-    plt.plot(extended_years[-2:], ferrari_forecast, label='Ferrari Forecast', marker='o', linestyle='--', color='orange')
-    plt.plot(extended_years[-2:], mercedes_forecast, label='Mercedes Forecast', marker='o', linestyle='--', color='green')
+    plt.figure(figsize=(12, 7))
+    for company in ['Ferrari', 'Mercedes', 'Porsche']:
+        actual_and_forecast = np.append(df[f'{company}_{metric_name}'].values, forecasts[company])
+        plt.plot(extended_years, actual_and_forecast, label=f'{company} Actual & Forecast', marker='o', linestyle='-')
+    
     plt.title(f'{metric_name} with Forecasted Values (2024-2025)')
     plt.xlabel('Year')
     plt.ylabel(metric_name)
     plt.legend()
     plt.grid(True)
     plt.xticks(rotation=45)
+    plt.tight_layout()  # Adjust layout to make room for the legend
     plt.show()
 
-# Example: Forecast and plot "Current Ratio"
+# Forecast and plot each metric
 for metric in metrics:
     plot_forecasted_metric(metric, all_data_df)
